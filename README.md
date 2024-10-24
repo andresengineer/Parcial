@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Procesamiento de imágenes
 
 Este directorio contiene un conjunto de códigos que permiten aplicar un conjunto de filtros básicos a una imagen usando el lenguaje C.
@@ -127,3 +128,7 @@ void aplicarFiltro(int *imagen, int *imagenProcesada, int width, int height) {
 
 ```
 
+=======
+# Parcial
+Parcial Infrastructuras Paralelas y Distribuidas
+>>>>>>> 9dc10aacff1f166d79ed5b007eb8112aeb2a06ca
