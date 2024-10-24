@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <omp.h>
 
 // Funciones placeholder para la carga y guardado de imágenes
 void cargarImagen(int *imagen, int width, int height);
@@ -15,6 +16,9 @@ int calcularSumaPixeles(int *imagen, int width, int height);
 char *filename;
 
 int main(int argc, char* argv[]) {
+
+    omp_set_num_threads(16);
+
     int width = 1024, height = 1024;
     int *imagen = (int *)malloc(width * height * sizeof(int));
     int *imagenProcesada = (int *)malloc(width * height * sizeof(int));
@@ -28,8 +32,12 @@ int main(int argc, char* argv[]) {
     // Cargar la imagen (no paralelizable)
     cargarImagen(imagen, width, height);
 
+
     // Aplicar filtro (paralelizable)
     aplicarFiltro(imagen, imagenProcesada, width, height);
+
+    
+
 
     // Calcular suma de píxeles (parte paralelizable)
     int sumaPixeles = calcularSumaPixeles(imagenProcesada, width, height);
@@ -85,6 +93,7 @@ void aplicarFiltro(int *imagen, int *imagenProcesada, int width, int height) {
     int Gx[3][3] = {{-1, 0, 1}, {-2, 0, 2}, {-1, 0, 1}};
     int Gy[3][3] = {{-1, -2, -1}, {0, 0, 0}, {1, 2, 1}};
 
+    #pragma omp parallel for
     for (int y = 1; y < height - 1; y++) {
         for (int x = 1; x < width - 1; x++) {
             int sumX = 0;
@@ -108,6 +117,7 @@ void aplicarFiltro(int *imagen, int *imagenProcesada, int width, int height) {
 
 int calcularSumaPixeles(int *imagen, int width, int height) {
     int suma = 0;
+    #pragma omp parallel for reduction(+:suma)
     for (int i = 0; i < width * height; i++) {
         suma += imagen[i];
     }
