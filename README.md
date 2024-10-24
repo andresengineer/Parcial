@@ -1,129 +1,94 @@
-# Procesamiento de imágenes
 
-Este directorio contiene un conjunto de códigos que permiten aplicar un conjunto de filtros básicos a una imagen usando el lenguaje C.
-Los filtros que se pueden aplicar son:
+# Filtro de Imágenes con OpenMP
 
-- Filtro de desenfoque.
-- Filtro de detección de bordes.
-- Filtro de Realce. 
+Este proyecto implementa la carga, procesamiento y guardado de imágenes aplicando un filtro de Sobel en paralelo usando **OpenMP**. Se evalúa el rendimiento de las versiones secuencial y paralela con distintos números de hilos en un procesador **Intel(R) Core(TM) i7-9700**.
 
-El programa `main.c` contiene el código para aplicar estos filtros.
-Este programa lee la información de los bits que representan una imagen y hace las transformaciones necesarias.
-Se han desarrollado dos scripts en Python que permiten extraer los bits de información de una imagen en formato PNG (`fromPNG2Bin.py`) y toma un conjunto de bits y los almacena de regreso en una imagen en formato PNG (`fromBin2PNG.py`).
+## Información del equipo
 
-Se ha desarrollado un script en Bash llamado `all.sh` y el cual integra los códigos descritos anteriormente para aplicar un filtro a una imagen. 
 
-El `Makefile` permite la compilación y ejecución de los códigos/archivos descritos anteriormente.
+Architecture:            x86_64
+  CPU op-mode(s):        32-bit, 64-bit
+  Address sizes:         39 bits physical, 48 bits virtual
+  Byte Order:            Little Endian
+CPU(s):                  8
+  On-line CPU(s) list:   0-7
+Vendor ID:               GenuineIntel
+  Model name:            Intel(R) Core(TM) i7-9700 CPU @ 3.00GHz
+    CPU family:          6
+    Model:               158
+    Thread(s) per core:  1
+    Core(s) per socket:  8
+    Socket(s):           1
+    Stepping:            13
+    BogoMIPS:            5999.99
 
-- `make all` permite la compilación y la ejecución del programa.
-- `make compile` permite la compilación del programa `main.c`.
-- `make clean` borra archivos creados durante la compilación y la ejecución del programa.
+## Resultados de la ejecución
 
-## Descripción 
+### Ejecución secuencial
 
-El script `all.sh` usa tres programas le aplican un filtro a una imagen PNG de 1024x1024.
-
-El script `all.sh` contiene lo siguiente:
-
-```
-#!/usr/bin/env bash
-INPUT_PNG="image.png"
-TEMP_FILE="image.bin"
-python3 fromPNG2Bin.py ${INPUT_PNG}
-./main ${TEMP_FILE}
-python3 fromBin2PNG.py ${TEMP_FILE}.new
-```
-
-Los tres programas que se usan son `fromPNG2Bin.py`, `fromBin2PNG.py` y `main`. 
-En este caso se asume que `image.png` es una imagen PNG de 1024x1024.
-Lo que hace el script `fromPNG2Bin.py` es convertir la imagen de formanto PNG a una secuencia de pixeles.
-Esa secuencia de pixeles queda almacenada en `image.bin` (`${TEMP_FILE}`).
-Sobre los datos en `image.bin` se aplica un filtro que está en el archivo `./main`. 
-Al terminar la ejecución del programa `main` se genera un archivo en este caso llamado `image.bin.new`.
-El archivo `image.bin.new` es pasado al script `fromBin2PNG.py` y genera un nuevo archivo llamado `image.bin.PNG`. 
-Este archivo es el archivo que contiene el PNG alterado.
-
-## Otros posibles filtros
-
-Para usar los filtros que se presentan a continuación se debe cambiar la función `aplicarFiltro` que se encuentra en el programa `main.c`.
-
-### Filtro de desenfoque (Blur Filter)
-
-```
-void aplicarFiltro(int *imagen, int *imagenProcesada, int width, int height) {
-    // Recorre cada píxel de la imagen (excepto los bordes)
-    for (int y = 1; y < height - 1; y++) {
-        for (int x = 1; x < width - 1; x++) {
-            // Promedia los valores de los píxeles vecinos
-            int sum = 0;
-            sum += imagen[(y - 1) * width + (x - 1)];  // Superior Izquierda
-            sum += imagen[(y - 1) * width + x];        // Superior
-            sum += imagen[(y - 1) * width + (x + 1)];  // Superior Derecha
-            sum += imagen[y * width + (x - 1)];        // Izquierda
-            sum += imagen[y * width + x];              // Centro
-            sum += imagen[y * width + (x + 1)];        // Derecha
-            sum += imagen[(y + 1) * width + (x - 1)];  // Inferior Izquierda
-            sum += imagen[(y + 1) * width + x];        // Inferior
-            sum += imagen[(y + 1) * width + (x + 1)];  // Inferior Derecha
-
-            imagenProcesada[y * width + x] = sum / 9;  // Asigna el promedio al píxel procesado
-        }
-    }
-}
-
+```bash
+EJECUCIÓN SECUENCIAL
+8,674 s
+8,652 s
+8,619 s
+8,783 s (X)
+9,058 s (X)
+PROMEDIO: 8,703 s
 ```
 
-### Filtro de detección de bordes (Edge Detection) - Filtro Sobel
+La ejecución secuencial de la aplicación tiene un promedio de **8,703 segundos**. Las ejecuciones marcadas con una **X** fueron descartadas por presentar valores atípicos.
 
-```
-void aplicarFiltro(int *imagen, int *imagenProcesada, int width, int height) {
-    int Gx[3][3] = {{-1, 0, 1}, {-2, 0, 2}, {-1, 0, 1}};
-    int Gy[3][3] = {{-1, -2, -1}, {0, 0, 0}, {1, 2, 1}};
+### Ejecución paralela (8 hilos)
 
-    for (int y = 1; y < height - 1; y++) {
-        for (int x = 1; x < width - 1; x++) {
-            int sumX = 0;
-            int sumY = 0;
-
-            // Aplicar máscaras de Sobel (Gx y Gy)
-            for (int ky = -1; ky <= 1; ky++) {
-                for (int kx = -1; kx <= 1; kx++) {
-                    sumX += imagen[(y + ky) * width + (x + kx)] * Gx[ky + 1][kx + 1];
-                    sumY += imagen[(y + ky) * width + (x + kx)] * Gy[ky + 1][kx + 1];
-                }
-            }
-
-            // Calcular magnitud del gradiente
-            int magnitude = abs(sumX) + abs(sumY);
-            imagenProcesada[y * width + x] = (magnitude > 255) ? 255 : magnitude;  // Normalizar a 8 bits
-        }
-    }
-}
-
+```bash
+EJECUCIÓN PARALELA (OMP_NUM_THREADS=8)
+9,883 s (X)
+10,325 s (X)
+10,274 s
+10,221 s
+10,190 s
+PROMEDIO: 10,228 s
 ```
 
-### Filtro de Realce (Sharpen Filter)
+La ejecución paralela con **8 hilos** muestra un promedio de **10,228 segundos**. Los valores atípicos también fueron descartados en este caso.
 
-```
-void aplicarFiltro(int *imagen, int *imagenProcesada, int width, int height) {
-    int kernel[3][3] = {{0, -1, 0}, {-1, 5, -1}, {0, -1, 0}};
+### Ejecución paralela (16 hilos)
 
-    for (int y = 1; y < height - 1; y++) {
-        for (int x = 1; x < width - 1; x++) {
-            int sum = 0;
-
-            // Aplicar kernel de realce
-            for (int ky = -1; ky <= 1; ky++) {
-                for (int kx = -1; kx <= 1; kx++) {
-                    sum += imagen[(y + ky) * width + (x + kx)] * kernel[ky + 1][kx + 1];
-                }
-            }
-
-            // Clampeo del valor para que esté entre 0 y 255
-            imagenProcesada[y * width + x] = (sum > 255) ? 255 : (sum < 0) ? 0 : sum;
-        }
-    }
-}
-
+```bash
+EJECUCIÓN PARALELA (OMP_NUM_THREADS=16)
+9,053 s (X)
+8,978 s
+8,881 s
+8,692 s
+8,667 s (X)
+PROMEDIO: 8,850 s
 ```
 
+La ejecución paralela con **16 hilos** tiene un promedio de **8,850 segundos**, con algunos valores descartados.
+
+## Speedup
+
+El **speedup** compara el tiempo de la versión secuencial con el tiempo de la versión paralela, calculado como:
+
+\[	Speeduo = Secuencial / Paralelo
+\]
+
+### Speedup con 8 hilos
+
+\[	Speedup = 8,703/10,228 = 0.8509
+\]
+
+### Speedup con 16 hilos
+
+\[	Speedup = 8,703/8,850 = 0.9834
+\]
+
+## Comentarios sobre los resultados
+
+1. **Ejecución secuencial**: El tiempo promedio fue de **8,703 segundos**, lo que sirve como referencia para evaluar las versiones paralelas.
+
+2. **Ejecución paralela con 8 hilos**: El tiempo promedio fue de **10,228 segundos**, mayor que la ejecución secuencial. Esto resulta en un **speedup de 0.8509**, lo que indica que la paralelización en este caso no trajo mejoras en rendimiento. Este resultado puede deberse a la sobrecarga de la gestión de hilos o a que el algoritmo no escala bien con este nivel de paralelización.
+
+3. **Ejecución paralela con 16 hilos**: El tiempo promedio fue de **8,850 segundos**, más cercano al tiempo de la versión secuencial. El **speedup de 0.9834** es cercano a 1, lo que sugiere que con **16 hilos** no se logra un beneficio significativo de paralelización. Aumentar el número de hilos no necesariamente mejora el rendimiento si el trabajo paralelo es limitado o si se introduce sobrecarga adicional.
+
+4. **Conclusión**: En este caso, la paralelización no mejoró los tiempos de ejecución y, de hecho, los empeoró en algunos casos. Esto puede deberse a la sobrecarga en la creación y sincronización de hilos, o a la limitada parte del código que realmente puede ser paralelizada de manera eficiente en este caso.
